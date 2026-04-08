@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import puter from 'puter';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 
 interface ChatRequest {
   message: string;
@@ -9,6 +11,7 @@ interface ChatRequest {
   model: string;
   temperature: number;
   provider: 'gemini' | 'openrouter' | 'ollama' | 'huggingface' | 'claude';
+  userId: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -18,6 +21,27 @@ export async function POST(request: NextRequest) {
     if (!body.message || !body.message.trim()) {
       return NextResponse.json({ error: 'Poruka ne može biti prazna' }, { status: 400 });
     }
+
+    // Rate Limiting: Check usage in the last minute
+    const oneMinuteAgo = Date.now() - 60 * 1000;
+    const usageQuery = query(
+      collection(db, 'usageLogs'),
+      where('userId', '==', body.userId),
+      where('timestamp', '>=', oneMinuteAgo)
+    );
+    const usageSnapshot = await getDocs(usageQuery);
+    if (usageSnapshot.size >= 10) {
+      return NextResponse.json({ error: 'Previše zahtjeva. Molimo sačekajte minut.' }, { status: 429 });
+    }
+
+    // Log Usage
+    await addDoc(collection(db, 'usageLogs'), {
+      userId: body.userId,
+      agentId: body.agentName,
+      model: body.model,
+      provider: body.provider,
+      timestamp: Date.now()
+    });
 
     if (body.provider === 'claude') {
       const stream = await puter.ai.chat(body.message, {

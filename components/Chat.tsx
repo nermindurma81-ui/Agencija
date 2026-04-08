@@ -682,7 +682,8 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             systemInstruction: finalSystemInstruction,
             model: settings.model,
             temperature: settings.temperature,
-            provider: settings.provider
+            provider: settings.provider,
+            userId: user?.uid
           }),
         });
 

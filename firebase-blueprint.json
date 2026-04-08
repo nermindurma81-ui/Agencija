@@ -40,6 +40,19 @@
         "updatedAt": { "type": "number" }
       },
       "required": ["agentId", "userId", "messages", "updatedAt"]
+    },
+    "UsageLog": {
+      "title": "UsageLog",
+      "description": "Log of agent usage for analytics and rate limiting",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "agentId": { "type": "string" },
+        "model": { "type": "string" },
+        "provider": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "agentId", "model", "provider", "timestamp"]
     }
   },
   "firestore": {
@@ -54,6 +67,10 @@
     "/chatSessions/{sessionId}": {
       "schema": { "$ref": "#/entities/ChatSession" },
       "description": "User chat sessions"
+    },
+    "/usageLogs/{logId}": {
+      "schema": { "$ref": "#/entities/UsageLog" },
+      "description": "Usage logs for analytics"
     }
   }
 }
