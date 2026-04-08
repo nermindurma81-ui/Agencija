@@ -23,6 +23,11 @@
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-family: var(--font-body), sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
 }
 
 .theme-bg-primary { background-color: var(--bg-primary); }

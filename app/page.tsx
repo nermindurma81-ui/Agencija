@@ -1,5 +1,5 @@
 import { getAgents } from '@/lib/github';
-import Dashboard from '@/components/Dashboard';
+import AgencyStudio from '@/components/AgencyStudio';
 
 export default async function Home() {
   let agentsByDept = null;
@@ -25,7 +25,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#050505]">
-      <Dashboard agentsByDept={agentsByDept} />
+      <AgencyStudio agentsByDept={agentsByDept} />
     </main>
   );
 }

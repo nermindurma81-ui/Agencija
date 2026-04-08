@@ -53,24 +53,25 @@
         "timestamp": { "type": "number" }
       },
       "required": ["userId", "agentId", "model", "provider", "timestamp"]
-    }
-  },
-  "firestore": {
-    "/customModels/{modelId}": {
-      "schema": { "$ref": "#/entities/CustomModel" },
-      "description": "User created super models"
     },
-    "/customTools/{toolId}": {
-      "schema": { "$ref": "#/entities/CustomTool" },
-      "description": "User created tools"
-    },
-    "/chatSessions/{sessionId}": {
-      "schema": { "$ref": "#/entities/ChatSession" },
-      "description": "User chat sessions"
-    },
-    "/usageLogs/{logId}": {
-      "schema": { "$ref": "#/entities/UsageLog" },
-      "description": "Usage logs for analytics"
-    }
-  }
-}
+    "StudioRun": {
+      "title": "StudioRun",
+      "description": "A persisted orchestration run stored for an authenticated user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "workflowId": { "type": "string" },
+        "workflowName": { "type": "string" },
+        "query": { "type": "string" },
+        "selectedAgentName": { "type": "string" },
+        "selectedAgentPath": { "type": "string" },
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "usedWebResearch": { "type": "boolean" },
+        "skillId": { "type": "string" },
+        "final": { "type": "string" },
+        "stages": { "type": "array", "items": { "type": "object" } },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "workflowId", "workflowName", "query", "selectedAgentName", "selectedAgentPath", "provider", "model", "final"]
+    },{
