@@ -80,6 +80,12 @@ function summarizeMemory(entries: RunMemoryEntry[]) {
     .join('\n\n');
 }
 
+function stripUndefined<T extends Record<string, unknown>>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== undefined)
+  ) as T;
+}
+
 export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<string, Agent[]> }) {
   const agents = useMemo(() => flattenAgents(agentsByDept), [agentsByDept]);
   const [activeTab, setActiveTab] = useState<StudioTab>('studio');
@@ -207,15 +213,16 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    const uid = user?.uid;
+    if (!uid) return;
 
     const runsQuery = firestoreQuery(
       collection(db, CLOUD_RUNS),
-      where('userId', '==', user.uid)
+      where('userId', '==', uid)
     );
     const skillsQuery = firestoreQuery(
       collection(db, CLOUD_SKILLS),
-      where('userId', '==', user.uid)
+      where('userId', '==', uid)
     );
 
     const unsubRuns = onSnapshot(runsQuery, (snapshot) => {
@@ -354,12 +361,12 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
         stages: data.stages,
       };
 
-      if (user && cloudSyncEnabled) {
-        await addDoc(collection(db, CLOUD_RUNS), {
+      if (user?.uid && cloudSyncEnabled) {
+        await addDoc(collection(db, CLOUD_RUNS), stripUndefined({
           ...memoryEntry,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        });
+        }));
       } else {
         setMemoryEntries((prev) => [memoryEntry, ...prev].slice(0, 30));
       }
@@ -433,12 +440,12 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     };
 
     const persist = async () => {
-      if (user && cloudSyncEnabled) {
-        const ref = await addDoc(collection(db, CLOUD_SKILLS), {
+      if (user?.uid && cloudSyncEnabled) {
+        const ref = await addDoc(collection(db, CLOUD_SKILLS), stripUndefined({
           ...profile,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        });
+        }));
         setSelectedSkillId(ref.id);
       } else {
         setSkills((prev) => [profile, ...prev]);
@@ -486,13 +493,13 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     const parsed = JSON.parse(text) as SkillBrainProfile[];
     if (!Array.isArray(parsed)) throw new Error('Invalid skill import file');
 
-    if (user && cloudSyncEnabled) {
+    if (user?.uid && cloudSyncEnabled) {
       for (const profile of parsed) {
-        await addDoc(collection(db, CLOUD_SKILLS), {
+        await addDoc(collection(db, CLOUD_SKILLS), stripUndefined({
           ...profile,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        });
+        }));
       }
     } else {
       setSkills((prev) => {
@@ -508,13 +515,13 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     const parsed = JSON.parse(text) as RunMemoryEntry[];
     if (!Array.isArray(parsed)) throw new Error('Invalid memory import file');
 
-    if (user && cloudSyncEnabled) {
+    if (user?.uid && cloudSyncEnabled) {
       for (const entry of parsed) {
-        await addDoc(collection(db, CLOUD_RUNS), {
+        await addDoc(collection(db, CLOUD_RUNS), stripUndefined({
           ...entry,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        });
+        }));
       }
     } else {
       setMemoryEntries((prev) => {

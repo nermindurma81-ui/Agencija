@@ -9,7 +9,7 @@ interface ChatRequest {
   model: string;
   temperature: number;
   provider: 'huggingface' | 'openrouter' | 'ollama';
-  userId: string;
+  userId?: string;
   hfToken?: string;
   openRouterKey?: string;
   ollamaUrl?: string;
@@ -23,25 +23,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Poruka ne može biti prazna' }, { status: 400 });
     }
 
+    const userId = typeof body.userId === 'string' && body.userId.trim() ? body.userId.trim() : null;
+
     // Rate Limiting
-    const oneMinuteAgo = Date.now() - 60 * 1000;
-    const usageQuery = query(
-      collection(db, 'usageLogs'),
-      where('userId', '==', body.userId),
-      where('timestamp', '>=', oneMinuteAgo)
-    );
-    const usageSnapshot = await getDocs(usageQuery);
-    if (usageSnapshot.size >= 15) {
-      return NextResponse.json({ error: 'Previše zahtjeva. Molimo sačekajte minut.' }, { status: 429 });
+    if (userId) {
+      const oneMinuteAgo = Date.now() - 60 * 1000;
+      const usageQuery = query(
+        collection(db, 'usageLogs'),
+        where('userId', '==', userId),
+        where('timestamp', '>=', oneMinuteAgo)
+      );
+      const usageSnapshot = await getDocs(usageQuery);
+      if (usageSnapshot.size >= 15) {
+        return NextResponse.json({ error: 'Previše zahtjeva. Molimo sačekajte minut.' }, { status: 429 });
+      }
     }
 
-    await addDoc(collection(db, 'usageLogs'), {
-      userId: body.userId,
-      agentId: body.agentName,
-      model: body.model,
-      provider: body.provider,
-      timestamp: Date.now()
-    });
+    if (userId) {
+      await addDoc(collection(db, 'usageLogs'), {
+        userId,
+        agentId: body.agentName,
+        model: body.model,
+        provider: body.provider,
+        timestamp: Date.now()
+      });
+    }
 
     const systemPrompt = `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom jeziku.`;
 

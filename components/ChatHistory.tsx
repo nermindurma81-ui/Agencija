@@ -18,9 +18,10 @@ export function ChatHistory({ user, onSelectSession }: { user: FirebaseUser | nu
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (!user) return;
+    const uid = user?.uid;
+    if (!uid) return;
 
-    const q = query(collection(db, 'chatSessions'), where('userId', '==', user.uid));
+    const q = query(collection(db, 'chatSessions'), where('userId', '==', uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedSessions: ChatSession[] = [];
       snapshot.forEach((doc) => {

@@ -147,13 +147,14 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   useEffect(() => {
-    if (!user) {
+    const uid = user?.uid;
+    if (!uid) {
       setCustomModels([]);
       setCustomTools([]);
       return;
     }
 
-    const qModels = query(collection(db, 'customModels'), where('userId', '==', user.uid));
+    const qModels = query(collection(db, 'customModels'), where('userId', '==', uid));
     const unsubModels = onSnapshot(qModels, (snapshot) => {
       const models: Agent[] = [];
       snapshot.forEach((doc) => {
@@ -169,7 +170,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
       setCustomModels(models);
     }, (error) => handleFirestoreError(error, 'LIST', 'customModels'));
 
-    const qTools = query(collection(db, 'customTools'), where('userId', '==', user.uid));
+    const qTools = query(collection(db, 'customTools'), where('userId', '==', uid));
     const unsubTools = onSnapshot(qTools, (snapshot) => {
       const tools: any[] = [];
       snapshot.forEach((doc) => {
