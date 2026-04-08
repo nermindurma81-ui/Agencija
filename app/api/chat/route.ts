@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
-import puter from 'puter';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 interface ChatRequest {
   message: string;
@@ -10,19 +8,21 @@ interface ChatRequest {
   systemInstruction: string;
   model: string;
   temperature: number;
-  provider: 'gemini' | 'openrouter' | 'ollama' | 'huggingface' | 'claude';
+  provider: 'huggingface' | 'openrouter';
   userId: string;
+  hfToken?: string;
+  openRouterKey?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    
+
     if (!body.message || !body.message.trim()) {
       return NextResponse.json({ error: 'Poruka ne može biti prazna' }, { status: 400 });
     }
 
-    // Rate Limiting: Check usage in the last minute
+    // Rate Limiting
     const oneMinuteAgo = Date.now() - 60 * 1000;
     const usageQuery = query(
       collection(db, 'usageLogs'),
@@ -30,11 +30,10 @@ export async function POST(request: NextRequest) {
       where('timestamp', '>=', oneMinuteAgo)
     );
     const usageSnapshot = await getDocs(usageQuery);
-    if (usageSnapshot.size >= 10) {
+    if (usageSnapshot.size >= 15) {
       return NextResponse.json({ error: 'Previše zahtjeva. Molimo sačekajte minut.' }, { status: 429 });
     }
 
-    // Log Usage
     await addDoc(collection(db, 'usageLogs'), {
       userId: body.userId,
       agentId: body.agentName,
@@ -43,66 +42,134 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now()
     });
 
-    if (body.provider === 'claude') {
-      const stream = await puter.ai.chat(body.message, {
-        model: body.model,
-        system: `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom.`,
-        stream: true
-      });
+    const systemPrompt = `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom jeziku.`;
+
+    // ── HuggingFace Inference API ──────────────────────────────────────────
+    if (body.provider === 'huggingface') {
+      const hfToken = body.hfToken || process.env.HF_TOKEN || '';
+
+      const hfRes = await fetch(
+        `https://api-inference.huggingface.co/models/${body.model}/v1/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${hfToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: body.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: body.message },
+            ],
+            temperature: body.temperature ?? 0.7,
+            max_tokens: 2048,
+            stream: true,
+          }),
+        }
+      );
+
+      if (!hfRes.ok) {
+        const err = await hfRes.text();
+        return NextResponse.json({ error: `HuggingFace greška: ${err}` }, { status: hfRes.status });
+      }
 
       const encoder = new TextEncoder();
-      const readableStream = new ReadableStream({
+      const readable = new ReadableStream({
         async start(controller) {
+          const reader = hfRes.body!.getReader();
+          const decoder = new TextDecoder();
           try {
-            for await (const chunk of stream) {
-              controller.enqueue(encoder.encode(chunk));
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              for (const line of chunk.split('\n')) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (data === '[DONE]') continue;
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json.choices?.[0]?.delta?.content;
+                  if (delta) controller.enqueue(encoder.encode(delta));
+                } catch { /* skip malformed */ }
+              }
             }
             controller.close();
           } catch (err) {
             controller.error(err);
           }
-        }
+        },
       });
 
-      return new Response(readableStream, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       });
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Server nije pravilno konfiguriran' }, { status: 500 });
-    }
+    // ── OpenRouter ────────────────────────────────────────────────────────
+    if (body.provider === 'openrouter') {
+      const orKey = body.openRouterKey || process.env.OPENROUTER_KEY || '';
 
-    const ai = new GoogleGenAI({ apiKey });
+      const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${orKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://agency.app',
+          'X-Title': 'The Agency',
+        },
+        body: JSON.stringify({
+          model: body.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: body.message },
+          ],
+          temperature: body.temperature ?? 0.7,
+          stream: true,
+        }),
+      });
 
-    const result = await ai.models.generateContentStream({
-      model: body.model || 'gemini-1.5-flash',
-      contents: [{ role: 'user', parts: [{ text: body.message }] }],
-      config: {
-        systemInstruction: `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom.`,
-        temperature: body.temperature || 0.7,
+      if (!orRes.ok) {
+        const err = await orRes.text();
+        return NextResponse.json({ error: `OpenRouter greška: ${err}` }, { status: orRes.status });
       }
-    });
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result) {
-            const chunkText = chunk.text();
-            controller.enqueue(encoder.encode(chunkText));
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          const reader = orRes.body!.getReader();
+          const decoder = new TextDecoder();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              for (const line of chunk.split('\n')) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (data === '[DONE]') continue;
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json.choices?.[0]?.delta?.content;
+                  if (delta) controller.enqueue(encoder.encode(delta));
+                } catch { /* skip */ }
+              }
+            }
+            controller.close();
+          } catch (err) {
+            controller.error(err);
           }
-          controller.close();
-        } catch (err) {
-          controller.error(err);
-        }
-      }
-    });
+        },
+      });
 
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    }
+
+    return NextResponse.json({ error: 'Nepodržani provider.' }, { status: 400 });
+
   } catch (error: any) {
     console.error('Chat API error:', error);
     return NextResponse.json({ error: error.message || 'Greška pri obradi zahtjeva' }, { status: 500 });

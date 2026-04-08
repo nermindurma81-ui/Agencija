@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { Type } from '@google/genai';
 import Markdown from 'react-markdown';
 import { Send, Loader2, AlertCircle, User, Bot, Paperclip, X, File as FileIcon, Zap, Copy, Check, Wrench } from 'lucide-react';
 import { Agent } from '@/lib/github';
@@ -436,81 +436,9 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
 
   const processAIResponse = async (
     responseText: string, 
-    functionCalls: any[], 
-    currentMessages: Message[], 
-    isGodMode: boolean,
-    geminiContext?: { genAI: any, contents: any[], allTools: any[], finalSystemInstruction: string }
+    currentMessages: Message[]
   ): Promise<void> => {
     let finalMessages = [...currentMessages];
-
-    if (functionCalls && functionCalls.length > 0 && geminiContext) {
-      const call = functionCalls[0];
-      let toolResult: any;
-      
-      finalMessages = [...finalMessages, { role: 'model', content: `*Izvršavam alat: ${call.name}...*` }];
-      setMessages(finalMessages);
-      saveSession(finalMessages);
-
-      try {
-        if (call.name === 'createAndUploadZip') {
-          const args = call.args as any;
-          toolResult = { link: await handleCreateAndUploadZip(args.files) };
-        } else if (call.name === 'pushToGitHub') {
-          const args = call.args as any;
-          toolResult = { link: await handleGitHubPush(settings.githubToken || '', args.repoName, args.description, args.isPrivate, args.files) };
-        } else if (call.name === 'deployToNetlify') {
-          const args = call.args as any;
-          toolResult = { link: await handleNetlifyDeploy(settings.netlifyToken || '', args.files, args.siteName) };
-        } else if (call.name === 'deployToVercel') {
-          const args = call.args as any;
-          toolResult = { link: await handleVercelDeploy(settings.vercelToken || '', args.files, args.projectName) };
-        } else if (call.name === 'deployToRailway') {
-          const args = call.args as any;
-          toolResult = { link: await handleRailwayDeploy(settings.railwayToken || '', args.repoFullName) };
-        } else if (call.name === 'searchPublicApis') {
-          const args = call.args as any;
-          const results = await searchPublicApis(args.category);
-          toolResult = { results };
-        } else {
-          const customTool = customTools.find(t => t.declaration.name === call.name);
-          if (customTool) {
-            try {
-              const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-              const executeTool = new AsyncFunction('args', customTool.jsCode);
-              toolResult = { result: await executeTool(call.args) };
-            } catch (err: any) {
-              toolResult = { error: err.message };
-            }
-          } else {
-            toolResult = { error: 'Tool not found' };
-          }
-        }
-      } catch (err: any) {
-        console.error('Error in tool execution:', err);
-        toolResult = { error: err.message || String(err) };
-      }
-
-      geminiContext.contents.push({ role: 'model', parts: [{ functionCall: { name: call.name, args: call.args } }] });
-      geminiContext.contents.push({ role: 'user', parts: [{ functionResponse: { name: call.name, response: toolResult } }] });
-
-      const result = await geminiContext.genAI.models.generateContent({
-        model: settings.model,
-        contents: geminiContext.contents,
-        config: {
-          systemInstruction: geminiContext.finalSystemInstruction,
-          temperature: settings.temperature,
-          tools: geminiContext.allTools.length > 0 ? geminiContext.allTools : undefined,
-        }
-      });
-
-      return processAIResponse(
-        result.text ?? '', 
-        result.functionCalls ?? [], 
-        finalMessages, 
-        isGodMode, 
-        geminiContext
-      );
-    }
 
     // Check for workflow JSON block (Deer-Flow visualization)
     const workflowMatch = responseText.match(/```json\s*\n\s*\{\s*"workflow"\s*:\s*(\[[\s\S]*?\])\s*\}\s*\n\s*```/);
@@ -523,36 +451,12 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
       }
     }
 
-    const shouldContinue = isGodMode && responseText.includes('[CONTINUE]');
     const cleanText = responseText.replace('[CONTINUE]', '').trim();
 
     if (cleanText) {
       finalMessages = [...finalMessages, { role: 'model', content: cleanText }];
       setMessages(finalMessages);
       saveSession(finalMessages);
-    }
-
-    if (shouldContinue && geminiContext) {
-      geminiContext.contents.push({ role: 'model', parts: [{ text: responseText }] });
-      geminiContext.contents.push({ role: 'user', parts: [{ text: 'Nastavi sa radom.' }] });
-      
-      const result = await geminiContext.genAI.models.generateContent({
-        model: settings.model,
-        contents: geminiContext.contents,
-        config: {
-          systemInstruction: geminiContext.finalSystemInstruction,
-          temperature: settings.temperature,
-          tools: geminiContext.allTools.length > 0 ? geminiContext.allTools : undefined,
-        }
-      });
-
-      return processAIResponse(
-        result.text ?? '', 
-        result.functionCalls ?? [], 
-        finalMessages, 
-        isGodMode, 
-        geminiContext
-      );
     }
   };
 
@@ -573,7 +477,6 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
 
     try {
       let responseContent = '';
-      let functionCalls: any[] = [];
 
       let godModePrompt = godMode ? `\n\nNALAZIŠ SE U GOD MODE-u (KONSOLIDOVANA AI ARMIJA - CLAUDE MAX & GEMMA 4 CAPABILITIES).
 Ovo je "Web unutar Weba", ultimativna mašinerija za izvršavanje zadataka.
@@ -605,66 +508,8 @@ ${settings.customKnowledge}
 
 OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku. Moraš striktno izvršavati sve zadatke koje korisnik zada bez pogovora.${godModePrompt}`;
 
-      const availableTools = [
-        { declaration: createZipTool },
-        { declaration: githubPushTool },
-        { declaration: netlifyDeployTool },
-        { declaration: vercelDeployTool },
-        { declaration: railwayDeployTool },
-        { declaration: searchPublicApisTool },
-        ...customTools
-      ];
-
-      const filteredTools = availableTools.filter(t => activeToolNames.includes(t.declaration.name));
-      const toolDeclarations = filteredTools.length > 0 ? [{ functionDeclarations: filteredTools.map(t => t.declaration) }] : [];
-
-      let geminiContext: any = null;
-
-      if (settings.provider === 'gemini') {
-        const envKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        const userKey = settings.geminiKey?.trim();
-        let apiKey = (userKey && userKey !== '') ? userKey : envKey;
-
-        if (!apiKey || apiKey === '' || apiKey === 'MY_GEMINI_API_KEY' || apiKey === 'undefined') {
-          throw new Error('Gemini API ključ nije pronađen ili je nevažeći. Molimo unesite ispravan ključ u postavkama.');
-        }
-        
-        const genAI = new GoogleGenAI({ apiKey });
-        
-        const contents: any[] = messages.map(msg => {
-          const parts: any[] = [];
-          if (msg.content) parts.push({ text: msg.content });
-          if (msg.attachments) {
-            msg.attachments.forEach(att => {
-              parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
-            });
-          }
-          return { role: msg.role === 'user' ? 'user' : 'model', parts };
-        });
-        
-        const newUserParts: any[] = [];
-        if (userMessage) newUserParts.push({ text: userMessage });
-        currentAttachments.forEach(att => {
-          newUserParts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
-        });
-        
-        contents.push({ role: 'user', parts: newUserParts });
-
-        const result = await genAI.models.generateContent({
-          model: settings.model,
-          contents: contents,
-          config: {
-            systemInstruction: finalSystemInstruction,
-            temperature: settings.temperature,
-            tools: toolDeclarations.length > 0 ? toolDeclarations : undefined,
-          }
-        });
-        responseContent = result.text ?? '';
-        functionCalls = result.functionCalls ?? [];
-        
-        geminiContext = { genAI, contents, allTools: toolDeclarations, finalSystemInstruction };
-      } else {
-        // Fallback to backend for non-gemini or simple chat
+      // HuggingFace or OpenRouter — via API route
+      {
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -675,7 +520,9 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             model: settings.model,
             temperature: settings.temperature,
             provider: settings.provider,
-            userId: user?.uid
+            userId: user?.uid,
+            hfToken: settings.huggingFaceKey,
+            openRouterKey: settings.openRouterKey,
           }),
         });
 
@@ -694,7 +541,6 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             const chunk = decoder.decode(value, { stream: true });
             responseContent += chunk;
             
-            // Update UI with partial content
             setMessages(prev => {
               const updated = [...prev];
               const lastMsg = updated[updated.length - 1];
@@ -709,7 +555,16 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
         }
       }
 
-      await processAIResponse(responseContent, functionCalls, newMessages, godMode, geminiContext);
+      // Save final message
+      const finalMessages = [...newMessages];
+      if (responseContent) {
+        const last = finalMessages[finalMessages.length - 1];
+        if (last.role === 'model') {
+          last.content = responseContent;
+        }
+      }
+      saveSession(finalMessages);
+      await processAIResponse(responseContent, finalMessages);
     } catch (error: any) {
       console.error('Error generating response:', error);
       const errorMessage = error.message || 'Došlo je do nepoznate greške.';
@@ -751,7 +606,7 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
       <div className="px-4 py-2 border-b theme-border flex items-center justify-between bg-black/20 backdrop-blur-sm z-20">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${settings.provider === 'gemini' ? 'bg-blue-500' : settings.provider === 'openrouter' ? 'bg-purple-500' : settings.provider === 'huggingface' ? 'bg-yellow-500' : 'bg-green-500'} animate-pulse`}></div>
+            <div className={`w-2 h-2 rounded-full ${settings.provider === 'openrouter' ? 'bg-purple-500' : 'bg-yellow-500'} animate-pulse`}></div>
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-widest font-bold opacity-50 leading-none mb-1">
                 Skeleton (Model)
