@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import puter from 'puter';
 
 interface ChatRequest {
   message: string;
@@ -7,6 +8,7 @@ interface ChatRequest {
   systemInstruction: string;
   model: string;
   temperature: number;
+  provider: 'gemini' | 'openrouter' | 'ollama' | 'huggingface' | 'claude';
 }
 
 export async function POST(request: NextRequest) {
@@ -15,6 +17,32 @@ export async function POST(request: NextRequest) {
     
     if (!body.message || !body.message.trim()) {
       return NextResponse.json({ error: 'Poruka ne može biti prazna' }, { status: 400 });
+    }
+
+    if (body.provider === 'claude') {
+      const stream = await puter.ai.chat(body.message, {
+        model: body.model,
+        system: `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom.`,
+        stream: true
+      });
+
+      const encoder = new TextEncoder();
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              controller.enqueue(encoder.encode(chunk));
+            }
+            controller.close();
+          } catch (err) {
+            controller.error(err);
+          }
+        }
+      });
+
+      return new Response(readableStream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
     }
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;

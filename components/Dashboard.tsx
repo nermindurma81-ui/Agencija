@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Agent, getAgentPrompt } from '@/lib/github';
 import Chat from './Chat';
 import ModelManager from './ModelManager';
-import { Menu, X, Terminal, Briefcase, Code, PenTool, Megaphone, Target, Gamepad, GraduationCap, Wrench, Shield, HeadphonesIcon, Search, Star, Settings2, Plus, LogIn, LogOut, Wrench as ToolIcon, Puzzle, Sun, Moon, Building2, Cpu, Database, Loader2 } from 'lucide-react';
+import { ChatHistory } from './ChatHistory';
+import { Menu, X, Terminal, Briefcase, Code, PenTool, Megaphone, Target, Gamepad, GraduationCap, Wrench, Shield, HeadphonesIcon, Search, Star, Settings2, Plus, LogIn, LogOut, Wrench as ToolIcon, Puzzle, Sun, Moon, Building2, Cpu, Database, Loader2, History } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, doc, setDoc } from 'firebase/firestore';
@@ -31,7 +32,7 @@ const DEPT_ICONS: Record<string, React.ReactNode> = {
 
 export interface AgentSettings {
   model: string;
-  provider: 'gemini' | 'openrouter' | 'ollama' | 'huggingface';
+  provider: 'gemini' | 'openrouter' | 'ollama' | 'huggingface' | 'claude';
   temperature: number;
   customKnowledge: string;
   githubToken?: string;
@@ -55,6 +56,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [settingsTab, setSettingsTab] = useState<'general' | 'models'>('general');
+  const [view, setView] = useState<'agents' | 'history'>('agents');
   const [settings, setSettings] = useState<AgentSettings>({
     model: 'gemini-1.5-flash',
     provider: 'gemini',
@@ -420,98 +422,120 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
               <p className="text-[10px] theme-text-secondary uppercase tracking-widest">AI Specialists</p>
             </div>
           </div>
-          <button className="md:hidden theme-text-secondary hover:theme-text-primary p-1" onClick={() => setIsSidebarOpen(false)}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-4 border-b theme-border">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-secondary" />
-            <input
-              type="text"
-              placeholder="Search agents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full theme-bg-tertiary border theme-border text-sm theme-text-primary rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:border-[#FF6321] focus:ring-1 focus:ring-[#FF6321] transition-all"
-            />
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setView(view === 'agents' ? 'history' : 'agents')}
+              className={`p-2 rounded-lg transition-colors ${view === 'history' ? 'bg-[#FF6321] text-black' : 'theme-text-secondary hover:theme-text-primary'}`}
+              title={view === 'agents' ? 'Prikaži istoriju' : 'Prikaži agente'}
+            >
+              {view === 'agents' ? <History size={18} /> : <Briefcase size={18} />}
+            </button>
+            <button className="md:hidden theme-text-secondary hover:theme-text-primary p-1" onClick={() => setIsSidebarOpen(false)}>
+              <X size={20} />
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
-          {favoriteAgents.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3 px-2">
-                <span className="text-yellow-500">
-                  <Star size={16} fill="currentColor" />
-                </span>
-                <h2 className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
-                  Favorites
-                </h2>
-              </div>
-              <div className="space-y-1">
-                {favoriteAgents.map(agent => (
-                  <button
-                    key={agent.path}
-                    onClick={() => handleSelectAgent(agent)}
-                    className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      selectedAgent?.path === agent.path
-                        ? 'theme-bg-tertiary text-[#FF6321] font-medium border theme-border'
-                        : 'theme-text-secondary hover:theme-bg-tertiary hover:theme-text-primary border border-transparent'
-                    }`}
-                  >
-                    <span className="truncate pr-2">{agent.name}</span>
-                    <Star 
-                      size={14} 
-                      className="shrink-0 text-yellow-500 hover:text-yellow-400 transition-colors" 
-                      fill="currentColor"
-                      onClick={(e) => toggleFavorite(e, agent.path)}
-                    />
-                  </button>
-                ))}
+        {view === 'agents' ? (
+          <>
+            <div className="p-4 border-b theme-border">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 theme-text-secondary" />
+                <input
+                  type="text"
+                  placeholder="Search agents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full theme-bg-tertiary border theme-border text-sm theme-text-primary rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:border-[#FF6321] focus:ring-1 focus:ring-[#FF6321] transition-all"
+                />
               </div>
             </div>
-          )}
 
-          {Object.keys(filteredAgentsByDept).length === 0 && favoriteAgents.length === 0 ? (
-            <div className="text-center theme-text-secondary text-sm py-8">
-              No agents found matching &quot;{searchQuery}&quot;
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+              {favoriteAgents.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 px-2">
+                    <span className="text-yellow-500">
+                      <Star size={16} fill="currentColor" />
+                    </span>
+                    <h2 className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
+                      Favorites
+                    </h2>
+                  </div>
+                  <div className="space-y-1">
+                    {favoriteAgents.map(agent => (
+                      <button
+                        key={agent.path}
+                        onClick={() => handleSelectAgent(agent)}
+                        className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                          selectedAgent?.path === agent.path
+                            ? 'theme-bg-tertiary text-[#FF6321] font-medium border theme-border'
+                            : 'theme-text-secondary hover:theme-bg-tertiary hover:theme-text-primary border border-transparent'
+                        }`}
+                      >
+                        <span className="truncate pr-2">{agent.name}</span>
+                        <Star 
+                          size={14} 
+                          className="shrink-0 text-yellow-500 hover:text-yellow-400 transition-colors" 
+                          fill="currentColor"
+                          onClick={(e) => toggleFavorite(e, agent.path)}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Object.keys(filteredAgentsByDept).length === 0 && favoriteAgents.length === 0 ? (
+                <div className="text-center theme-text-secondary text-sm py-8">
+                  No agents found matching &quot;{searchQuery}&quot;
+                </div>
+              ) : (
+                Object.entries(filteredAgentsByDept).map(([dept, agents]) => (
+                  <div key={dept}>
+                    <div className="flex items-center gap-2 mb-3 px-2">
+                      <span className="text-[#FF6321]">
+                        {DEPT_ICONS[dept] || <Briefcase size={16} />}
+                      </span>
+                      <h2 className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
+                        {dept.replace('-', ' ')}
+                      </h2>
+                    </div>
+                    <div className="space-y-1">
+                      {agents.map(agent => (
+                        <button
+                          key={agent.path}
+                          onClick={() => handleSelectAgent(agent)}
+                          className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                            selectedAgent?.path === agent.path
+                              ? 'theme-bg-tertiary text-[#FF6321] font-medium border theme-border'
+                              : 'theme-text-secondary hover:theme-bg-tertiary hover:theme-text-primary border border-transparent'
+                          }`}
+                        >
+                          <span className="truncate pr-2">{agent.name}</span>
+                          <Star 
+                            size={14} 
+                            className="shrink-0 text-gray-600 hover:text-yellow-500 transition-colors" 
+                            onClick={(e) => toggleFavorite(e, agent.path)}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          ) : (
-            Object.entries(filteredAgentsByDept).map(([dept, agents]) => (
-              <div key={dept}>
-                <div className="flex items-center gap-2 mb-3 px-2">
-                  <span className="text-[#FF6321]">
-                    {DEPT_ICONS[dept] || <Briefcase size={16} />}
-                  </span>
-                  <h2 className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
-                    {dept.replace('-', ' ')}
-                  </h2>
-                </div>
-                <div className="space-y-1">
-                  {agents.map(agent => (
-                    <button
-                      key={agent.path}
-                      onClick={() => handleSelectAgent(agent)}
-                      className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedAgent?.path === agent.path
-                          ? 'theme-bg-tertiary text-[#FF6321] font-medium border theme-border'
-                          : 'theme-text-secondary hover:theme-bg-tertiary hover:theme-text-primary border border-transparent'
-                      }`}
-                    >
-                      <span className="truncate pr-2">{agent.name}</span>
-                      <Star 
-                        size={14} 
-                        className="shrink-0 text-gray-600 hover:text-yellow-500 transition-colors" 
-                        onClick={(e) => toggleFavorite(e, agent.path)}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+          </>
+        ) : (
+          <ChatHistory user={user} onSelectSession={(sessionId) => {
+            // Handle session selection
+            console.log('Selected session:', sessionId);
+            setView('agents');
+            // Need to find agent from sessionId and select it
+            // sessionId format: `${user.uid}_${safeAgentPath}`
+            // This might need more logic to select the correct agent
+          }} />
+        )}
       </motion.div>
 
       {/* Main Content */}
@@ -607,6 +631,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
             <Chat 
               agent={selectedAgent} 
               systemInstruction={systemInstruction} 
+              setSystemInstruction={setSystemInstruction}
               settings={settings}
               user={user}
               customTools={customTools}

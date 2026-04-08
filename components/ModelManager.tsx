@@ -46,6 +46,16 @@ export default function ModelManager({ ollamaUrl, onActivate, currentModel }: Mo
     { name: 'Llama 3.2 3B', url: 'hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M' },
   ];
 
+  const PUTER_MODELS = [
+    { name: 'Claude 3.5 Sonnet', id: 'claude-3-5-sonnet' },
+    { name: 'Claude 3.5 Opus', id: 'claude-3-5-opus' },
+    { name: 'Claude 3.5 Haiku', id: 'claude-3-5-haiku' },
+    { name: 'Llama 3.1 405B', id: 'llama-3-1-405b' },
+    { name: 'Llama 3.1 70B', id: 'llama-3-1-70b' },
+    { name: 'Mistral Large 2', id: 'mistral-large-2' },
+    { name: 'Qwen 2.5 72B', id: 'qwen-2-5-72b' },
+  ];
+
   const pullModel = async (targetUrl?: string) => {
     const urlToPull = targetUrl || hfUrl;
     if (!urlToPull.trim()) return;
@@ -143,6 +153,33 @@ export default function ModelManager({ ollamaUrl, onActivate, currentModel }: Mo
             >
               <span className="text-xs font-medium text-gray-300 group-hover:text-white">{m.name}</span>
               <Download size={14} className="text-gray-500 group-hover:text-[#FF6321]" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Puter Models */}
+      <div className="bg-[#111] border border-[#333] rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+            <Terminal size={18} className="text-blue-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold">Puter Models (Cloud)</h3>
+            <p className="text-[10px] text-gray-500">Besplatan pristup (bez API ključa)</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {PUTER_MODELS.map(m => (
+            <button 
+              key={m.id}
+              onClick={() => onActivate(m.id)}
+              className={`flex items-center justify-between px-3 py-2 bg-[#111] border rounded-lg transition-all group ${
+                currentModel === m.id ? 'border-[#FF6321]' : 'border-[#333] hover:border-[#FF6321]'
+              }`}
+            >
+              <span className="text-xs font-medium text-gray-300 group-hover:text-white">{m.name}</span>
+              {currentModel === m.id && <Check size={14} className="text-[#FF6321]" />}
             </button>
           ))}
         </div>

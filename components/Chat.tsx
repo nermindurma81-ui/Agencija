@@ -7,6 +7,7 @@ import Markdown from 'react-markdown';
 import { Send, Loader2, AlertCircle, User, Bot, Paperclip, X, File as FileIcon, Zap, Copy, Check, Wrench } from 'lucide-react';
 import { Agent } from '@/lib/github';
 import { AgentSettings } from './Dashboard';
+import { PromptEditor } from './PromptEditor';
 import { searchPublicApis } from '@/lib/publicApis';
 import JSZip from 'jszip';
 import { db, auth } from '@/lib/firebase';
@@ -321,7 +322,7 @@ async function handleRailwayDeploy(token: string, repoFullName: string) {
   return `Project created on Railway from ${repoFullName}. Check your Railway dashboard to view the deployment.`;
 }
 
-export default function Chat({ agent, systemInstruction, settings, user, customTools = [], onSwipeRight }: { agent: Agent; systemInstruction: string; settings: AgentSettings; user: FirebaseUser | null; customTools?: any[]; onSwipeRight?: () => void }) {
+export default function Chat({ agent, systemInstruction, setSystemInstruction, settings, user, customTools = [], onSwipeRight }: { agent: Agent; systemInstruction: string; setSystemInstruction: (instruction: string) => void; settings: AgentSettings; user: FirebaseUser | null; customTools?: any[]; onSwipeRight?: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -681,6 +682,7 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             systemInstruction: finalSystemInstruction,
             model: settings.model,
             temperature: settings.temperature,
+            provider: settings.provider
           }),
         });
 
@@ -788,6 +790,8 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
           Settings
         </button>
       </div>
+
+      <PromptEditor systemInstruction={systemInstruction} onSave={setSystemInstruction} />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 relative z-10">
         {messages.map((msg, idx) => (
