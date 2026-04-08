@@ -74,22 +74,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server nije pravilno konfiguriran' }, { status: 500 });
     }
 
-    const genAI = new (GoogleGenAI as any)(apiKey);
-    const model = genAI.getGenerativeModel({
+    const ai = new GoogleGenAI({ apiKey });
+
+    const result = await ai.models.generateContentStream({
       model: body.model || 'gemini-1.5-flash',
-      systemInstruction: `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom.`,
-      generationConfig: {
+      contents: [{ role: 'user', parts: [{ text: body.message }] }],
+      config: {
+        systemInstruction: `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom.`,
         temperature: body.temperature || 0.7,
       }
     });
-
-    const result = await model.generateContentStream(body.message);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
+          for await (const chunk of result) {
             const chunkText = chunk.text();
             controller.enqueue(encoder.encode(chunkText));
           }

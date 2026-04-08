@@ -493,22 +493,19 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
       geminiContext.contents.push({ role: 'model', parts: [{ functionCall: { name: call.name, args: call.args } }] });
       geminiContext.contents.push({ role: 'user', parts: [{ functionResponse: { name: call.name, response: toolResult } }] });
 
-      const model = geminiContext.genAI.getGenerativeModel({ 
+      const result = await geminiContext.genAI.models.generateContent({
         model: settings.model,
-        systemInstruction: geminiContext.finalSystemInstruction,
-        tools: geminiContext.allTools as any,
-      });
-
-      const result = await model.generateContent({
         contents: geminiContext.contents,
-        generationConfig: {
+        config: {
+          systemInstruction: geminiContext.finalSystemInstruction,
           temperature: settings.temperature,
+          tools: geminiContext.allTools.length > 0 ? geminiContext.allTools : undefined,
         }
       });
 
       return processAIResponse(
-        result.response.text(), 
-        result.response.functionCalls() || [], 
+        result.text ?? '', 
+        result.functionCalls ?? [], 
         finalMessages, 
         isGodMode, 
         geminiContext
@@ -539,22 +536,19 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
       geminiContext.contents.push({ role: 'model', parts: [{ text: responseText }] });
       geminiContext.contents.push({ role: 'user', parts: [{ text: 'Nastavi sa radom.' }] });
       
-      const model = geminiContext.genAI.getGenerativeModel({ 
+      const result = await geminiContext.genAI.models.generateContent({
         model: settings.model,
-        systemInstruction: geminiContext.finalSystemInstruction,
-        tools: geminiContext.allTools as any,
-      });
-
-      const result = await model.generateContent({
         contents: geminiContext.contents,
-        generationConfig: {
+        config: {
+          systemInstruction: geminiContext.finalSystemInstruction,
           temperature: settings.temperature,
+          tools: geminiContext.allTools.length > 0 ? geminiContext.allTools : undefined,
         }
       });
 
       return processAIResponse(
-        result.response.text(), 
-        result.response.functionCalls() || [], 
+        result.text ?? '', 
+        result.functionCalls ?? [], 
         finalMessages, 
         isGodMode, 
         geminiContext
@@ -635,12 +629,7 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
           throw new Error('Gemini API ključ nije pronađen ili je nevažeći. Molimo unesite ispravan ključ u postavkama.');
         }
         
-        const genAI = new (GoogleGenAI as any)(apiKey);
-        const model = (genAI as any).getGenerativeModel({ 
-          model: settings.model,
-          systemInstruction: finalSystemInstruction,
-          tools: toolDeclarations as any,
-        });
+        const genAI = new GoogleGenAI({ apiKey });
         
         const contents: any[] = messages.map(msg => {
           const parts: any[] = [];
@@ -661,14 +650,17 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
         
         contents.push({ role: 'user', parts: newUserParts });
 
-        const result = await model.generateContent({
+        const result = await genAI.models.generateContent({
+          model: settings.model,
           contents: contents,
-          generationConfig: {
+          config: {
+            systemInstruction: finalSystemInstruction,
             temperature: settings.temperature,
+            tools: toolDeclarations.length > 0 ? toolDeclarations : undefined,
           }
         });
-        responseContent = result.response.text();
-        functionCalls = result.response.functionCalls() || [];
+        responseContent = result.text ?? '';
+        functionCalls = result.functionCalls ?? [];
         
         geminiContext = { genAI, contents, allTools: toolDeclarations, finalSystemInstruction };
       } else {
