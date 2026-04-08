@@ -508,9 +508,61 @@ ${settings.customKnowledge}
 
 OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku. Moraš striktno izvršavati sve zadatke koje korisnik zada bez pogovora.${godModePrompt}`;
 
-      // HuggingFace or OpenRouter — via API route
-      {
-        const response = await fetch('/api/chat', {
+      // Route request based on provider
+      let response;
+      
+      if (settings.provider === 'gemini') {
+        // Gemini is handled client-side via Google GenAI SDK
+        // For now, we'll use OpenRouter's free Gemini model as fallback
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            agentName: agent.name,
+            systemInstruction: finalSystemInstruction,
+            model: 'google/gemini-2.0-flash-001',
+            temperature: settings.temperature,
+            provider: 'openrouter',
+            userId: user?.uid,
+            openRouterKey: settings.openRouterKey || process.env.NEXT_PUBLIC_OPENROUTER_KEY,
+          }),
+        });
+      } else if (settings.provider === 'ollama') {
+        // Ollama is handled client-side via local endpoint
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            agentName: agent.name,
+            systemInstruction: finalSystemInstruction,
+            model: settings.model,
+            temperature: settings.temperature,
+            provider: 'ollama',
+            userId: user?.uid,
+            ollamaUrl: settings.ollamaUrl,
+          }),
+        });
+      } else if (settings.provider === 'claude') {
+        // Claude via OpenRouter
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            agentName: agent.name,
+            systemInstruction: finalSystemInstruction,
+            model: 'anthropic/claude-3.5-sonnet',
+            temperature: settings.temperature,
+            provider: 'openrouter',
+            userId: user?.uid,
+            openRouterKey: settings.openRouterKey,
+          }),
+        });
+      } else {
+        // HuggingFace or OpenRouter
+        response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -525,33 +577,33 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             openRouterKey: settings.openRouterKey,
           }),
         });
+      }
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Greška pri komunikaciji sa serverom');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Greška pri komunikaciji sa serverom');
+      }
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            responseContent += chunk;
-            
-            setMessages(prev => {
-              const updated = [...prev];
-              const lastMsg = updated[updated.length - 1];
-              if (lastMsg.role === 'model') {
-                lastMsg.content = responseContent;
-              } else {
-                updated.push({ role: 'model', content: responseContent });
-              }
-              return updated;
-            });
-          }
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          responseContent += chunk;
+          
+          setMessages(prev => {
+            const updated = [...prev];
+            const lastMsg = updated[updated.length - 1];
+            if (lastMsg.role === 'model') {
+              lastMsg.content = responseContent;
+            } else {
+              updated.push({ role: 'model', content: responseContent });
+            }
+            return updated;
+          });
         }
       }
 

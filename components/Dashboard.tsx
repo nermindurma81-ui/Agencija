@@ -714,6 +714,12 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
                           className={`text-xs py-2 rounded-lg border ${settings.provider === 'ollama' ? 'bg-[#FF6321] text-black border-[#FF6321]' : 'bg-[#111] text-gray-400 border-[#333]'}`}
                         >
                           Ollama (Local)
+                        <button 
+                          onClick={() => setSettings({...settings, provider: 'claude'})}
+                          className={`text-xs py-2 rounded-lg border ${settings.provider === 'claude' ? 'bg-[#FF6321] text-black border-[#FF6321]' : 'bg-[#111] text-gray-400 border-[#333]'}`}
+                        >
+                          Claude (OpenRouter)
+                        </button>
                         </button>
                       </div>
 
@@ -797,6 +803,27 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
                             placeholder="Model name (npr. llama3, mistral, gemma2)"
                             className="w-full bg-[#111] border border-[#333] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF6321]"
                           />
+                        </div>
+                      )}
+
+                      {settings.provider === 'claude' && (
+                        <div className="space-y-2">
+                          <input 
+                            type="password"
+                            value={settings.openRouterKey || ''}
+                            onChange={(e) => setSettings({...settings, openRouterKey: e.target.value})}
+                            placeholder="OpenRouter API Key (Za Claude)"
+                            className="w-full bg-[#111] border border-[#333] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF6321]"
+                          />
+                          <select 
+                            value={settings.model}
+                            onChange={(e) => setSettings({...settings, model: e.target.value})}
+                            className="w-full bg-[#111] border border-[#333] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF6321]"
+                          >
+                            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Preporučeno)</option>
+                            <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku (Brz & Jeftin)</option>
+                            <option value="anthropic/claude-3-opus">Claude 3 Opus (Moćan)</option>
+                          </select>
                         </div>
                       )}
                     </div>

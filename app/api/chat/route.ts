@@ -8,10 +8,11 @@ interface ChatRequest {
   systemInstruction: string;
   model: string;
   temperature: number;
-  provider: 'huggingface' | 'openrouter';
+  provider: 'huggingface' | 'openrouter' | 'ollama';
   userId: string;
   hfToken?: string;
   openRouterKey?: string;
+  ollamaUrl?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -154,6 +155,63 @@ export async function POST(request: NextRequest) {
                   const delta = json.choices?.[0]?.delta?.content;
                   if (delta) controller.enqueue(encoder.encode(delta));
                 } catch { /* skip */ }
+              }
+            }
+            controller.close();
+          } catch (err) {
+            controller.error(err);
+          }
+        },
+      });
+
+      return new Response(readable, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    }
+
+    // ── Ollama (Local) ────────────────────────────────────────────────────────
+    if (body.provider === 'ollama') {
+      const ollamaUrl = body.ollamaUrl || 'http://localhost:11434';
+
+      const ollamaRes = await fetch(`${ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: body.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: body.message },
+          ],
+          temperature: body.temperature ?? 0.7,
+          stream: true,
+        }),
+      });
+
+      if (!ollamaRes.ok) {
+        const err = await ollamaRes.text();
+        return NextResponse.json({ error: `Ollama greška: ${err}` }, { status: ollamaRes.status });
+      }
+
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          const reader = ollamaRes.body!.getReader();
+          const decoder = new TextDecoder();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              for (const line of chunk.split('\n')) {
+                if (!line.trim()) continue;
+                try {
+                  const json = JSON.parse(line);
+                  if (json.message?.content) {
+                    controller.enqueue(encoder.encode(json.message.content));
+                  }
+                } catch { /* skip malformed */ }
               }
             }
             controller.close();

@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import { Check, ExternalLink } from 'lucide-react';
 
 interface ModelManagerProps {
-  onActivate: (modelName: string, provider: 'huggingface' | 'openrouter') => void;
+  onActivate: (modelName: string, provider?: 'huggingface' | 'openrouter') => void;
   currentModel: string;
+  ollamaUrl?: string;
 }
 
 const HF_MODELS = [
