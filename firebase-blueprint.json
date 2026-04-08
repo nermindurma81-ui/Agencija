@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "CustomModel": {
+      "title": "CustomModel",
+      "description": "A user-created super model combining multiple agents",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "systemInstruction": { "type": "string" },
+        "baseModels": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "systemInstruction", "userId"]
+    },
+    "CustomTool": {
+      "title": "CustomTool",
+      "description": "A user-uploaded tool with JS code",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "parametersSchema": { "type": "string" },
+        "jsCode": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "description", "parametersSchema", "jsCode", "userId"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session with an agent",
+      "type": "object",
+      "properties": {
+        "agentId": { "type": "string" },
+        "userId": { "type": "string" },
+        "messages": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["agentId", "userId", "messages", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/customModels/{modelId}": {
+      "schema": { "$ref": "#/entities/CustomModel" },
+      "description": "User created super models"
+    },
+    "/customTools/{toolId}": {
+      "schema": { "$ref": "#/entities/CustomTool" },
+      "description": "User created tools"
+    },
+    "/chatSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "User chat sessions"
+    }
+  }
+}

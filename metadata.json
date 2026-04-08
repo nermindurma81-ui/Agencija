@@ -1,0 +1,5 @@
+{
+  "name": "Agency Agents Web",
+  "description": "A web interface for the agency-agents repository, providing free-tier AI agent workflows.",
+  "requestFramePermissions": []
+}
