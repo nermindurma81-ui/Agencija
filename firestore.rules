@@ -7,6 +7,14 @@ service cloud.firestore {
     match /chatSessions/{sessionId} {
       allow read, write: if true;
     }
+    match /studioRuns/{runId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    match /skillBrains/{skillId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

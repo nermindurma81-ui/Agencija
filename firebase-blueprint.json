@@ -74,4 +74,48 @@
         "createdAt": { "type": "number" }
       },
       "required": ["userId", "workflowId", "workflowName", "query", "selectedAgentName", "selectedAgentPath", "provider", "model", "final"]
-    },{
+    },
+    "SkillBrain": {
+      "title": "SkillBrain",
+      "description": "A reusable orchestration profile with a custom operational prompt",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "systemPrompt": { "type": "string" },
+        "preferredWorkflowId": { "type": "string" },
+        "providerOverride": { "type": "string" },
+        "modelOverride": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "name", "description", "systemPrompt"]
+    }
+  },
+  "firestore": {
+    "/customModels/{modelId}": {
+      "schema": { "$ref": "#/entities/CustomModel" },
+      "description": "User created super models"
+    },
+    "/customTools/{toolId}": {
+      "schema": { "$ref": "#/entities/CustomTool" },
+      "description": "User created tools"
+    },
+    "/chatSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "User chat sessions"
+    },
+    "/usageLogs/{logId}": {
+      "schema": { "$ref": "#/entities/UsageLog" },
+      "description": "Usage logs for analytics"
+    },
+    "/studioRuns/{runId}": {
+      "schema": { "$ref": "#/entities/StudioRun" },
+      "description": "Persistent orchestration runs"
+    },
+    "/skillBrains/{skillId}": {
+      "schema": { "$ref": "#/entities/SkillBrain" },
+      "description": "Reusable skill brain profiles"
+    }
+  }
+}
