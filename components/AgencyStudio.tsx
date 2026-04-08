@@ -630,18 +630,18 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
                 </span>
               ))}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${webResearchEnabled ? 'bg-[#ff8f3a] text-black' : 'bg-white/8 text-white/55'}`}>
-                web research {webResearchEnabled ? 'on' : 'off'}
-              </span>
-              <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${user ? 'bg-[#61ffad] text-black' : 'bg-white/8 text-white/55'}`}>
-                cloud sync {user ? 'on' : 'local'}
-              </span>
-              {selectedSkill ? (
-                <span className="rounded-full bg-[#d8ff76] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-black">
-                  skill {selectedSkill.name}
-                </span>
-              ) : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${webResearchEnabled ? 'bg-[#ff8f3a] text-black' : 'bg-white/8 text-white/55'}`}>
+                    web research {webResearchEnabled ? 'on' : 'off'}
+                  </span>
+                  <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${user ? 'bg-[#61ffad] text-black' : 'bg-white/8 text-white/55'}`}>
+                    cloud sync {user ? 'on' : 'local'}
+                  </span>
+                  {selectedSkill ? (
+                    <span className="rounded-full bg-[#d8ff76] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-black">
+                      skill {selectedSkill.name}
+                    </span>
+                  ) : null}
             </div>
             <div className="mt-6 grid gap-3">
               {selectedWorkflow.stages.map((stage) => (
