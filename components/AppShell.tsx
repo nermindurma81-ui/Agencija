@@ -4,7 +4,7 @@ import { useState } from 'react';
 import AgencyStudio from '@/components/AgencyStudio';
 import Dashboard from '@/components/Dashboard';
 import type { Agent } from '@/lib/github';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { MessageSquare, Settings2, Sparkles } from 'lucide-react';
 
 type ViewMode = 'studio' | 'chat';
 
@@ -38,6 +38,16 @@ export default function AppShell({ agentsByDept }: { agentsByDept: Record<string
               Chat + Models
             </button>
           </div>
+          {view === 'chat' ? (
+            <button
+              type="button"
+              onClick={() => (window as any).openSettings?.()}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+            >
+              <Settings2 size={14} />
+              Provider settings
+            </button>
+          ) : null}
         </div>
       </div>
 

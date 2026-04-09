@@ -471,7 +471,20 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
       setError('Firebase nije konfigurisan. Dodaj NEXT_PUBLIC_FIREBASE_* varijable.');
       return;
     }
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (error: any) {
+      const code = error?.code || '';
+      if (code.includes('unauthorized-domain')) {
+        setError('Firebase login blokiran: domen nije autorizovan u Firebase Console.');
+        return;
+      }
+      if (code.includes('operation-not-allowed')) {
+        setError('Firebase login blokiran: Google provider nije uključen u Authentication.');
+        return;
+      }
+      setError(error?.message || 'Login nije uspio.');
+    }
   }
 
   async function handleLogout() {
@@ -735,6 +748,33 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
                       ))}
                     </select>
                   </label>
+                  <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/55">Model routing</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="grid gap-2 text-sm">
+                        <span className="text-white/72">Provider</span>
+                        <select
+                          value={settings.provider}
+                          onChange={(event) => setSettings((prev) => ({ ...prev, provider: event.target.value as StudioSettings['provider'] }))}
+                          className="rounded-2xl border border-white/10 bg-[#111214] px-4 py-3 text-sm outline-none transition focus:border-[#ff8b37]"
+                        >
+                          <option value="openrouter">OpenRouter</option>
+                          <option value="huggingface">Hugging Face</option>
+                          <option value="ollama">Ollama</option>
+                          <option value="gemini">Gemini</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-2 text-sm">
+                        <span className="text-white/72">Model</span>
+                        <input
+                          value={settings.model}
+                          onChange={(event) => setSettings((prev) => ({ ...prev, model: event.target.value }))}
+                          className="rounded-2xl border border-white/10 bg-[#111214] px-4 py-3 text-sm outline-none transition focus:border-[#ff8b37]"
+                          placeholder="npr. google/gemini-2.0-flash-001"
+                        />
+                      </label>
+                    </div>
+                  </div>
                   <label className="grid gap-2 text-sm">
                     <span className="text-white/72">Mission</span>
                     <textarea

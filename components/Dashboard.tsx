@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Agent, getAgentPrompt } from '@/lib/github';
 import Chat from './Chat';
@@ -234,8 +234,18 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      const code = error?.code || '';
+      if (code.includes('unauthorized-domain')) {
+        alert('Firebase greška: domen nije autorizovan. Dodaj domen aplikacije u Firebase Auth > Authorized domains.');
+        return;
+      }
+      if (code.includes('operation-not-allowed')) {
+        alert('Firebase greška: Google login nije uključen. Uključi Google provider u Firebase Auth.');
+        return;
+      }
+      alert(`Login nije uspio: ${error?.message || 'Nepoznata greška'}`);
     }
   };
 
@@ -359,10 +369,13 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   // Combine agents
-  const allAgentsByDept = { ...agentsByDept };
-  if (customModels.length > 0) {
-    allAgentsByDept['super-models'] = customModels;
-  }
+  const allAgentsByDept = useMemo(() => {
+    const merged = { ...agentsByDept };
+    if (customModels.length > 0) {
+      merged['super-models'] = customModels;
+    }
+    return merged;
+  }, [agentsByDept, customModels]);
 
   // Filter logic and separate favorites
   const favoriteAgents: Agent[] = [];
@@ -383,13 +396,12 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
 
   // Select first agent by default
   useEffect(() => {
-    if (!selectedAgent && Object.keys(allAgentsByDept).length > 0) {
-      const firstDept = Object.keys(allAgentsByDept)[0];
-      if (allAgentsByDept[firstDept].length > 0) {
-        handleSelectAgent(allAgentsByDept[firstDept][0]);
-      }
-    }
-  }, [agentsByDept]); // Only run on initial load
+    if (selectedAgent || Object.keys(allAgentsByDept).length === 0) return;
+    const firstDept = Object.keys(allAgentsByDept)[0];
+    const firstAgent = allAgentsByDept[firstDept]?.[0];
+    if (!firstAgent) return;
+    void handleSelectAgent(firstAgent);
+  }, [allAgentsByDept, selectedAgent]);
 
   const handleSelectAgent = async (agent: Agent) => {
     setSelectedAgent(agent);
