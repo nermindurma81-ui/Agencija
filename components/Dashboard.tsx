@@ -45,6 +45,29 @@ export interface AgentSettings {
   ollamaUrl?: string;
 }
 
+const FREE_PRESETS: { label: string; description: string; settings: Pick<AgentSettings, 'provider' | 'model'> }[] = [
+  {
+    label: 'OpenRouter · Llama 3.1 8B (free)',
+    description: 'Dobar besplatan start preko OpenRouter free modela.',
+    settings: { provider: 'openrouter', model: 'meta-llama/llama-3.1-8b-instruct:free' },
+  },
+  {
+    label: 'Hugging Face · Mistral 7B',
+    description: 'Besplatan token na Hugging Face, stabilan chat model.',
+    settings: { provider: 'huggingface', model: 'mistralai/Mistral-7B-Instruct-v0.3' },
+  },
+  {
+    label: 'Claude preko OpenRouter',
+    description: 'Claude radi preko OpenRouter-a i traži API ključ.',
+    settings: { provider: 'claude', model: 'anthropic/claude-3.5-haiku' },
+  },
+  {
+    label: 'Ollama lokalno · llama3.2',
+    description: 'Bez cloud API ključa, ali model mora biti lokalno instaliran.',
+    settings: { provider: 'ollama', model: 'llama3.2' },
+  },
+];
+
 export default function Dashboard({ agentsByDept }: { agentsByDept: Record<string, Agent[]> }) {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [systemInstruction, setSystemInstruction] = useState<string>('');
@@ -690,6 +713,23 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
 
                   <div className="space-y-5">
                     <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">Quick presets</label>
+                      <div className="space-y-2">
+                        {FREE_PRESETS.map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setSettings({ ...settings, ...preset.settings })}
+                            className="w-full rounded-lg border border-[#333] bg-[#111] px-3 py-2 text-left transition hover:border-[#FF6321]/70"
+                          >
+                            <p className="text-xs font-semibold text-white">{preset.label}</p>
+                            <p className="mt-1 text-[11px] text-gray-500">{preset.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-400 mb-2">Provider & Model</label>
                       <div className="grid grid-cols-2 gap-2 mb-2">
                         <button 
@@ -715,12 +755,12 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
                           className={`text-xs py-2 rounded-lg border ${settings.provider === 'ollama' ? 'bg-[#FF6321] text-black border-[#FF6321]' : 'bg-[#111] text-gray-400 border-[#333]'}`}
                         >
                           Ollama (Local)
+                        </button>
                         <button 
                           onClick={() => setSettings({...settings, provider: 'claude'})}
                           className={`text-xs py-2 rounded-lg border ${settings.provider === 'claude' ? 'bg-[#FF6321] text-black border-[#FF6321]' : 'bg-[#111] text-gray-400 border-[#333]'}`}
                         >
                           Claude (OpenRouter)
-                        </button>
                         </button>
                       </div>
 
@@ -809,6 +849,9 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
 
                       {settings.provider === 'claude' && (
                         <div className="space-y-2">
+                          <p className="text-[10px] text-amber-400/80">
+                            Claude nema javni &quot;no-key&quot; API. Potreban je OpenRouter ključ ili Anthropic ključ.
+                          </p>
                           <input 
                             type="password"
                             value={settings.openRouterKey || ''}

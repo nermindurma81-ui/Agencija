@@ -476,6 +476,17 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
     setIsLoading(true);
 
     try {
+      const requiresOpenRouterKey = settings.provider === 'openrouter' || settings.provider === 'claude';
+      if (requiresOpenRouterKey && !settings.openRouterKey?.trim()) {
+        throw new Error('OpenRouter API ključ je obavezan za izabrani provider/model.');
+      }
+      if (settings.provider === 'huggingface' && !settings.huggingFaceKey?.trim()) {
+        throw new Error('Hugging Face token je obavezan za izabrani provider/model.');
+      }
+      if (settings.provider === 'gemini' && !settings.geminiKey?.trim() && !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        throw new Error('Gemini ključ nije postavljen. Dodaj ga u Settings.');
+      }
+
       let responseContent = '';
 
       let godModePrompt = godMode ? `\n\nNALAZIŠ SE U GOD MODE-u (KONSOLIDOVANA AI ARMIJA - CLAUDE MAX & GEMMA 4 CAPABILITIES).
