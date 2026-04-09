@@ -10,7 +10,7 @@ import { AgentSettings } from './Dashboard';
 import { PromptEditor } from './PromptEditor';
 import { searchPublicApis } from '@/lib/publicApis';
 import JSZip from 'jszip';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
 
@@ -351,7 +351,7 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
 
   // Load session from Firebase
   useEffect(() => {
-    if (!user) {
+    if (!user || !db) {
       setMessages([{
         role: 'model',
         content: `Zdravo! Ja sam **${agent.name}**. Kako vam mogu pomoći danas?`
@@ -396,7 +396,7 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
   }, [agent, user]);
 
   const saveSession = async (newMessages: Message[]) => {
-    if (!user) return;
+    if (!user || !db) return;
     const safeAgentPath = agent.path.split('/').pop()?.replace(/\.[^/.]+$/, "") || 'agent';
     const sessionId = `${user.uid}_${safeAgentPath}`;
     try {

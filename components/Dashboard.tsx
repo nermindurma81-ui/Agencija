@@ -7,7 +7,7 @@ import Chat from './Chat';
 import ModelManager from './ModelManager';
 import { ChatHistory } from './ChatHistory';
 import { Menu, X, Terminal, Briefcase, Code, PenTool, Megaphone, Target, Gamepad, GraduationCap, Wrench, Shield, HeadphonesIcon, Search, Star, Settings2, Plus, LogIn, LogOut, Wrench as ToolIcon, Puzzle, Sun, Moon, Building2, Cpu, Database, Loader2, History } from 'lucide-react';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, firebaseEnabled } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, doc, setDoc } from 'firebase/firestore';
 import { AVAILABLE_PLUGINS } from '@/lib/pluginStore';
@@ -152,6 +152,10 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   }, []);
 
   useEffect(() => {
+    if (!auth) {
+      setUser(null);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
@@ -163,15 +167,15 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
       error: error.message || String(error),
       operation,
       path,
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email
     };
     console.error('Firestore Error:', JSON.stringify(errInfo));
   };
 
   useEffect(() => {
     const uid = user?.uid;
-    if (!uid) {
+    if (!uid || !db) {
       setCustomModels([]);
       setCustomTools([]);
       return;
@@ -223,6 +227,10 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   }, [user]);
 
   const handleLogin = async () => {
+    if (!auth || !firebaseEnabled) {
+      alert('Firebase nije konfigurisan. Dodaj NEXT_PUBLIC_FIREBASE_* varijable.');
+      return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
@@ -232,6 +240,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error) {
@@ -240,7 +249,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   const handleCreateSuperModel = async () => {
-    if (!user || !smName || !smInstruction) return;
+    if (!user || !smName || !smInstruction || !db) return;
     try {
       await addDoc(collection(db, 'customModels'), {
         name: smName,
@@ -259,7 +268,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   const handleCreateTool = async () => {
-    if (!user || !toolName || !toolCode) return;
+    if (!user || !toolName || !toolCode || !db) return;
     try {
       await addDoc(collection(db, 'customTools'), {
         name: toolName,
@@ -279,6 +288,7 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   };
 
   const handleInstallPlugin = async (plugin: any) => {
+    if (!db) return alert("Baza nije dostupna. Provjerite Firebase konfiguraciju.");
     if (!user) return alert("Morate biti prijavljeni da biste instalirali plugin.");
     try {
       // Check if already installed

@@ -26,7 +26,7 @@ import { Agent, getAgentPrompt } from '@/lib/github';
 import { OrchestrationResponse, RunMemoryEntry, SkillBrainProfile, StudioSettings } from '@/lib/studio-types';
 import { WORKFLOWS } from '@/lib/workflows';
 import { getToolkitContext, getToolkitsForWorkflow } from '@/lib/toolkits';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, firebaseEnabled } from '@/lib/firebase';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import {
   addDoc,
@@ -205,16 +205,21 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
   const activeToolkits = useMemo(() => getToolkitsForWorkflow(selectedWorkflowId), [selectedWorkflowId]);
 
   useEffect(() => {
+    if (!auth) {
+      setUser(null);
+      setCloudSyncEnabled(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setCloudSyncEnabled(Boolean(currentUser));
+      setCloudSyncEnabled(Boolean(currentUser && firebaseEnabled));
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const uid = user?.uid;
-    if (!uid) return;
+    if (!uid || !db) return;
 
     const runsQuery = firestoreQuery(
       collection(db, CLOUD_RUNS),
@@ -361,7 +366,7 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
         stages: data.stages,
       };
 
-      if (user?.uid && cloudSyncEnabled) {
+      if (user?.uid && cloudSyncEnabled && db) {
         await addDoc(collection(db, CLOUD_RUNS), stripUndefined({
           ...memoryEntry,
           userId: user.uid,
@@ -440,7 +445,7 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     };
 
     const persist = async () => {
-      if (user?.uid && cloudSyncEnabled) {
+      if (user?.uid && cloudSyncEnabled && db) {
         const ref = await addDoc(collection(db, CLOUD_SKILLS), stripUndefined({
           ...profile,
           userId: user.uid,
@@ -462,10 +467,18 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
   }
 
   async function handleLogin() {
+    if (!auth) {
+      setError('Firebase nije konfigurisan. Dodaj NEXT_PUBLIC_FIREBASE_* varijable.');
+      return;
+    }
     await signInWithPopup(auth, new GoogleAuthProvider());
   }
 
   async function handleLogout() {
+    if (!auth) {
+      setCloudSyncEnabled(false);
+      return;
+    }
     await signOut(auth);
     setCloudSyncEnabled(false);
   }
@@ -493,7 +506,7 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     const parsed = JSON.parse(text) as SkillBrainProfile[];
     if (!Array.isArray(parsed)) throw new Error('Invalid skill import file');
 
-    if (user?.uid && cloudSyncEnabled) {
+    if (user?.uid && cloudSyncEnabled && db) {
       for (const profile of parsed) {
         await addDoc(collection(db, CLOUD_SKILLS), stripUndefined({
           ...profile,
@@ -515,7 +528,7 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
     const parsed = JSON.parse(text) as RunMemoryEntry[];
     if (!Array.isArray(parsed)) throw new Error('Invalid memory import file');
 
-    if (user?.uid && cloudSyncEnabled) {
+    if (user?.uid && cloudSyncEnabled && db) {
       for (const entry of parsed) {
         await addDoc(collection(db, CLOUD_RUNS), stripUndefined({
           ...entry,
