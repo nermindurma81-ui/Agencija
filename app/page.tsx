@@ -1,5 +1,5 @@
 import { getAgents } from '@/lib/github';
-import AgencyStudio from '@/components/AgencyStudio';
+import AppShell from '@/components/AppShell';
 
 export default async function Home() {
   let agentsByDept = null;
@@ -25,7 +25,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#050505]">
-      <AgencyStudio agentsByDept={agentsByDept} />
+      <AppShell agentsByDept={agentsByDept} />
     </main>
   );
 }
