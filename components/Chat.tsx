@@ -476,17 +476,14 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
     setIsLoading(true);
 
     try {
-      const requiresOpenRouterKey = settings.provider === 'openrouter' || settings.provider === 'claude';
+      const requiresOpenRouterKey =
+        settings.provider === 'openrouter' || settings.provider === 'claude' || settings.provider === 'gemini';
       if (requiresOpenRouterKey && !settings.openRouterKey?.trim()) {
         throw new Error('OpenRouter API ključ je obavezan za izabrani provider/model.');
       }
       if (settings.provider === 'huggingface' && !settings.huggingFaceKey?.trim()) {
         throw new Error('Hugging Face token je obavezan za izabrani provider/model.');
       }
-      if (settings.provider === 'gemini' && !settings.geminiKey?.trim() && !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-        throw new Error('Gemini ključ nije postavljen. Dodaj ga u Settings.');
-      }
-
       let responseContent = '';
 
       let godModePrompt = godMode ? `\n\nNALAZIŠ SE U GOD MODE-u (KONSOLIDOVANA AI ARMIJA - CLAUDE MAX & GEMMA 4 CAPABILITIES).
@@ -523,8 +520,7 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
       let response;
       
       if (settings.provider === 'gemini') {
-        // Gemini is handled client-side via Google GenAI SDK
-        // For now, we'll use OpenRouter's free Gemini model as fallback
+        // Gemini in this chat flow is currently routed through OpenRouter as fallback.
         response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -564,7 +560,7 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             message: userMessage,
             agentName: agent.name,
             systemInstruction: finalSystemInstruction,
-            model: 'anthropic/claude-3.5-sonnet',
+            model: settings.model || 'anthropic/claude-3.5-sonnet',
             temperature: settings.temperature,
             provider: 'openrouter',
             userId: user?.uid,
