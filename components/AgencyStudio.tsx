@@ -6,7 +6,6 @@ import Markdown from 'react-markdown';
 import {
   Bot,
   BrainCircuit,
-  ChevronRight,
   Cpu,
   Globe,
   Layers3,
@@ -616,78 +615,34 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
           </div>
         </header>
 
-        <section className="grid gap-4 px-4 pb-4 pt-6 md:grid-cols-[1.35fr_0.9fr] md:px-8">
+        <section className="px-4 pb-4 pt-6 md:px-8">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,132,38,0.18),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+            className="rounded-[24px] border border-white/10 bg-[#0f0f10]/85 p-4 shadow-[0_12px_50px_rgba(0,0,0,0.35)]"
           >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#ffbf80]/20 bg-[#ff9d4d]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.3em] text-[#ffbf80]">
-                  <ScanSearch size={14} />
-                  Real orchestration only
-                </p>
-                <h2 className="font-display text-4xl leading-none tracking-tight md:text-6xl">
-                  DeerFlow research + Agency roles + skill brain + memory.
-                </h2>
-                <p className="mt-4 max-w-xl text-sm leading-6 text-white/72 md:text-base">
-                  Studio sada ima tri nova stvarna sloja: web research, persistent memory run-ova i lokalni skill brain
-                  sistem koji menja ponašanje workflow-a bez mock simulacija.
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[#ffbf80]">Operational status</p>
+                <h2 className="mt-1 text-lg font-semibold">{selectedWorkflow.name}</h2>
               </div>
-              <div className="grid min-w-[220px] gap-3 text-sm">
-                <MetricCard label="Agency agents" value={String(agents.length)} />
-                <MetricCard label="Saved runs" value={String(memoryEntries.length)} />
-                <MetricCard label="Skill brains" value={String(skills.length)} />
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="rounded-[28px] border border-white/10 bg-[#0f0f10]/85 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.42)]"
-          >
-            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#ffbf80]">Current train</p>
-            <h3 className="mt-2 font-display text-3xl">{selectedWorkflow.name}</h3>
-            <p className="mt-2 text-sm text-white/70">{selectedWorkflow.strapline}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {selectedWorkflow.source.map((source) => (
-                <span
-                  key={source}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white/70"
-                >
-                  {source}
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/75">
+                  agents {agents.length}
                 </span>
-              ))}
-            </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${webResearchEnabled ? 'bg-[#ff8f3a] text-black' : 'bg-white/8 text-white/55'}`}>
-                    web research {webResearchEnabled ? 'on' : 'off'}
-                  </span>
-                  <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${user ? 'bg-[#61ffad] text-black' : 'bg-white/8 text-white/55'}`}>
-                    cloud sync {user ? 'on' : 'local'}
-                  </span>
-                  {selectedSkill ? (
-                    <span className="rounded-full bg-[#d8ff76] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-black">
-                      skill {selectedSkill.name}
-                    </span>
-                  ) : null}
-            </div>
-            <div className="mt-6 grid gap-3">
-              {selectedWorkflow.stages.map((stage) => (
-                <div key={stage.id} className="rounded-2xl border border-white/10 bg-white/4 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{stage.title}</p>
-                      <p className="text-xs text-white/55">{stage.supportAgentLabel}</p>
-                    </div>
-                    <ChevronRight size={16} className="text-[#ff9f52]" />
-                  </div>
-                </div>
-              ))}
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/75">
+                  runs {memoryEntries.length}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/75">
+                  brains {skills.length}
+                </span>
+                <span className={`rounded-full px-3 py-1 ${webResearchEnabled ? 'bg-[#ff8f3a] text-black' : 'bg-white/8 text-white/55'}`}>
+                  web {webResearchEnabled ? 'on' : 'off'}
+                </span>
+                <span className={`rounded-full px-3 py-1 ${user ? 'bg-[#61ffad] text-black' : 'bg-white/8 text-white/55'}`}>
+                  cloud {user ? 'on' : 'local'}
+                </span>
+              </div>
             </div>
           </motion.div>
         </section>
@@ -1310,15 +1265,6 @@ function PanelCard({
       <p className="mt-2 text-sm leading-6 text-white/68">{description}</p>
       <div className="mt-5">{children}</div>
     </section>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-white/10 bg-black/25 px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/45">{label}</p>
-      <p className="mt-2 font-display text-3xl">{value}</p>
-    </div>
   );
 }
 
