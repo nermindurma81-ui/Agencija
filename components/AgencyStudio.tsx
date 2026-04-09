@@ -40,10 +40,20 @@ type StudioTab = 'studio' | 'workflows' | 'agents' | 'memory' | 'brain' | 'stack
 
 const DEFAULT_SETTINGS: StudioSettings = {
   provider: 'openrouter',
-  model: 'google/gemini-2.0-flash-001',
+  model: 'meta-llama/llama-3.1-8b-instruct:free',
   temperature: 0.4,
   ollamaUrl: 'http://localhost:11434',
+  openRouterKey: process.env.NEXT_PUBLIC_OPENROUTER_KEY || '',
+  geminiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
 };
+
+const QUICK_MODEL_PRESETS: { label: string; provider: StudioSettings['provider']; model: string }[] = [
+  { label: 'OpenRouter Free · Llama 3.1 8B', provider: 'openrouter', model: 'meta-llama/llama-3.1-8b-instruct:free' },
+  { label: 'OpenRouter Free · Qwen 2 7B', provider: 'openrouter', model: 'qwen/qwen-2-7b-instruct:free' },
+  { label: 'Gemini Flash', provider: 'gemini', model: 'gemini-2.0-flash' },
+  { label: 'Ollama · llama3.2', provider: 'ollama', model: 'llama3.2' },
+  { label: 'Ollama · qwen2.5:7b', provider: 'ollama', model: 'qwen2.5:7b' },
+];
 
 const MEMORY_KEY = 'agencija_run_memory_v1';
 const SETTINGS_KEY = 'agencija_studio_settings';
@@ -705,6 +715,24 @@ export default function AgencyStudio({ agentsByDept }: { agentsByDept: Record<st
                   </label>
                   <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/55">Model routing</p>
+                    <div className="flex flex-wrap gap-2">
+                      {QUICK_MODEL_PRESETS.map((preset) => (
+                        <button
+                          key={`${preset.provider}-${preset.model}`}
+                          type="button"
+                          onClick={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              provider: preset.provider,
+                              model: preset.model,
+                            }))
+                          }
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/75 transition hover:bg-white/10"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="grid gap-2 text-sm">
                         <span className="text-white/72">Provider</span>

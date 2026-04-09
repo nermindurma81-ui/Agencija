@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { GoogleGenAI } from '@google/genai';
 
 interface ChatRequest {
   message: string;
@@ -8,11 +9,12 @@ interface ChatRequest {
   systemInstruction: string;
   model: string;
   temperature: number;
-  provider: 'huggingface' | 'openrouter' | 'ollama';
+  provider: 'huggingface' | 'openrouter' | 'ollama' | 'gemini';
   userId?: string;
   hfToken?: string;
   openRouterKey?: string;
   ollamaUrl?: string;
+  geminiKey?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -50,6 +52,28 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = `TI SI ${body.agentName}. ${body.systemInstruction}. Odgovaraj na bosanskom jeziku.`;
+
+    // ── Gemini ──────────────────────────────────────────────────────────────
+    if (body.provider === 'gemini') {
+      const geminiKey = body.geminiKey || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+      if (!geminiKey) {
+        return NextResponse.json({ error: 'Gemini API key nedostaje.' }, { status: 400 });
+      }
+
+      const client = new GoogleGenAI({ apiKey: geminiKey });
+      const response = await client.models.generateContent({
+        model: body.model || 'gemini-2.0-flash',
+        contents: `${systemPrompt}\n\nKorisnik:\n${body.message}`,
+        config: {
+          temperature: body.temperature ?? 0.7,
+        },
+      });
+
+      const text = response.text || '';
+      return new Response(text, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    }
 
     // ── HuggingFace Inference API ──────────────────────────────────────────
     if (body.provider === 'huggingface') {

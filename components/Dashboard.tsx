@@ -81,16 +81,16 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
   const [settingsTab, setSettingsTab] = useState<'general' | 'models'>('general');
   const [view, setView] = useState<'agents' | 'history'>('agents');
   const [settings, setSettings] = useState<AgentSettings>({
-    model: 'gemini-1.5-flash',
-    provider: 'gemini',
+    model: 'meta-llama/llama-3.1-8b-instruct:free',
+    provider: 'openrouter',
     temperature: 0.7,
     customKnowledge: '',
     githubToken: '',
     netlifyToken: '',
     vercelToken: '',
     railwayToken: '',
-    openRouterKey: '',
-    geminiKey: '',
+    openRouterKey: process.env.NEXT_PUBLIC_OPENROUTER_KEY || '',
+    geminiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
     ollamaUrl: 'http://localhost:11434'
   });
 
@@ -859,6 +859,17 @@ export default function Dashboard({ agentsByDept }: { agentsByDept: Record<strin
 
                       {settings.provider === 'ollama' && (
                         <div className="space-y-2">
+                          <select
+                            value={settings.model}
+                            onChange={(e) => setSettings({...settings, model: e.target.value})}
+                            className="w-full bg-[#111] border border-[#333] rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#FF6321]"
+                          >
+                            <option value="llama3.2">llama3.2 (Preporučeno mobile)</option>
+                            <option value="qwen2.5:7b">qwen2.5:7b (Brz i dobar)</option>
+                            <option value="gemma2:2b">gemma2:2b (Lagan)</option>
+                            <option value="mistral:7b">mistral:7b (Opšti)</option>
+                            <option value="phi3:mini">phi3:mini (Ultra lagan)</option>
+                          </select>
                           <input 
                             type="text"
                             value={settings.model}

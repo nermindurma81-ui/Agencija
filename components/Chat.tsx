@@ -477,12 +477,15 @@ export default function Chat({ agent, systemInstruction, setSystemInstruction, s
 
     try {
       const requiresOpenRouterKey =
-        settings.provider === 'openrouter' || settings.provider === 'claude' || settings.provider === 'gemini';
+        settings.provider === 'openrouter' || settings.provider === 'claude';
       if (requiresOpenRouterKey && !settings.openRouterKey?.trim()) {
         throw new Error('OpenRouter API ključ je obavezan za izabrani provider/model.');
       }
       if (settings.provider === 'huggingface' && !settings.huggingFaceKey?.trim()) {
         throw new Error('Hugging Face token je obavezan za izabrani provider/model.');
+      }
+      if (settings.provider === 'gemini' && !settings.geminiKey?.trim() && !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        throw new Error('Gemini ključ nedostaje. Dodaj ga u Settings.');
       }
       let responseContent = '';
 
@@ -520,7 +523,6 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
       let response;
       
       if (settings.provider === 'gemini') {
-        // Gemini in this chat flow is currently routed through OpenRouter as fallback.
         response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -528,11 +530,11 @@ OBAVEZNO PRAVILO: Svi tvoji odgovori MORAJU biti isključivo na bosanskom jeziku
             message: userMessage,
             agentName: agent.name,
             systemInstruction: finalSystemInstruction,
-            model: 'google/gemini-2.0-flash-001',
+            model: settings.model || 'gemini-2.0-flash',
             temperature: settings.temperature,
-            provider: 'openrouter',
+            provider: 'gemini',
             userId: user?.uid,
-            openRouterKey: settings.openRouterKey || process.env.NEXT_PUBLIC_OPENROUTER_KEY,
+            geminiKey: settings.geminiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY,
           }),
         });
       } else if (settings.provider === 'ollama') {

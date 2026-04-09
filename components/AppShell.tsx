@@ -13,8 +13,8 @@ export default function AppShell({ agentsByDept }: { agentsByDept: Record<string
 
   return (
     <>
-      <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0a0a0a]/90 px-4 py-3 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
+      <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0a0a0a]/90 px-3 py-3 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 overflow-x-auto [scrollbar-width:none]">
           <p className="text-xs uppercase tracking-[0.24em] text-white/65">Agencija Views</p>
           <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
             <button
@@ -42,7 +42,7 @@ export default function AppShell({ agentsByDept }: { agentsByDept: Record<string
             <button
               type="button"
               onClick={() => (window as any).openSettings?.()}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+              className="ml-auto inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
             >
               <Settings2 size={14} />
               Provider settings
